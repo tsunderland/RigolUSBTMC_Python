@@ -26,6 +26,7 @@ class usbtmc:
             exit()
 
     def ask(self, message=""):
+        """ Send a query to the unit and read the response."""
         self.write(message)
         return self.read()
 
@@ -40,6 +41,7 @@ class usbtmc:
         return os.read(self.FILE, length)
 
     def getName(self):
+        """ Return the unique identifier based on the *IDN? query"""
         self.write("*IDN?")
         sleep(0.10)
         return self.read(300)
@@ -48,6 +50,7 @@ class usbtmc:
         self.write("*RST")
 
     def close(self):
+        """ Returns the ability for the user to press buttons"""
         self.write("SYST:LOC")
 
 
@@ -77,6 +80,7 @@ class RigolDG:
 
 
     def setFunc(self, function = None, channel = None):
+        """ This sets the current function of the generator, SINE, SQUARE, NOISE, RAMP"""
         if channel == None:
             channel = CH1
         if channel == CH1:
@@ -89,12 +93,8 @@ class RigolDG:
                 msg += "SQU"
             elif(function == RAMP):
                 msg += "RAMP"
-            elif(function == PULSE):
-                msg += "PULS" # not supported by architecture
             elif(function == NOISE):
                 msg += "NOIS"
-            elif(function == ARB):
-                msg += "ARBI" # not supported by architecture
 
             if len(msg) > 6:
                 self.meas.write(msg)
@@ -109,18 +109,15 @@ class RigolDG:
                 msg += "SQU"
             elif(function == RAMP):
                 msg += "RAMP"
-            elif(function == PULSE):
-                msg += "PULS" # not supported by architecture
             elif(function == NOISE):
                 msg += "NOIS"
-            elif(function == ARB):
-                msg += "ARBI" # not supported by architecture
 
             if len(msg) > 9:
                 self.meas.write(msg)
 
 
     def enableChan1(self, en = True):
+        """ This function enables and checks the output of the channel. Ocassionally the screen will time out and the program would have to resend the command to ensure complience. This function only needs to be called once and will retry several times if needed"""
         msg = "OUTP "
         if en:
             msg += "ON"
@@ -144,6 +141,7 @@ class RigolDG:
 
 
     def enableChan2(self, en=True):
+        """ This function enables and checks the output of the channel. Ocassionally the screen will time out and the program would have to resend the command to ensure complience. This function only needs to be called once and will retry several times if needed"""
         msg = "OUTP:CH2 "
         if en:
             msg += "ON"
@@ -167,6 +165,7 @@ class RigolDG:
                     raise ValueException("Unable to Disable Channel 2!")
 
     def isChan1Enabled(self):
+        """ Check if we've got the ouput enabled"""
         ans = self.ask("OUTP?")
         if ans == 'ON\n\r':
             return True
@@ -174,6 +173,7 @@ class RigolDG:
             return False
 
     def isChan2Enabled(self):
+        """ Check if we've got the ouput enabled"""
         ans = self.ask("OUTP:CH2?")
         if ans == 'ON\n\r':
             return True
@@ -182,6 +182,7 @@ class RigolDG:
 
 
     def setFreqHz(self, value=10000.0 ,channel =None):
+        """ Set the frequency of the channel. Must provide frequency as a Hz value, ie 0.01Hz or 100000000Hz"""
         if(channel == None):
             if self.syncFreq:
                 msg="FREQ "+str(value)
@@ -202,15 +203,19 @@ class RigolDG:
             print("Unsupported channel selection")
 
     def write(self, message=""):
+        """ send the message using the low level control"""
         self.meas.write(message)
 
     def read(self):
+        """ read the message using the low level control"""
         return self.meas.read()
 
     def ask(self, message=""):
+        """ request a response using the low level control"""
         return self.meas.ask(message)
 
     def setVoltageUnits(self,unit="VPP",channel = None):
+        """ Provide string representation of voltage units"""
         if channel == None:
             if self.syncVoltage:
                 msg="VOLT:UNIT "+unit
@@ -238,6 +243,7 @@ class RigolDG:
 
 
     def setVoltage(self, value = 1.0, channel = None , offset=None):
+        """ Set the current voltage and offset for the given channel. If no Channel specified, channel one is used by default"""
         if channel == None:
             if self.syncVoltage:
                 msg="VOLT " + str(value)
@@ -274,10 +280,12 @@ class RigolDG:
             print("Unsupported channel selection")
 
     def disconnect(self):
+        """ Call this when you're done using the unit"""
         self.meas.close()
 
 
     def readVoltage(self, channel=None):
+        """Read the current value, Channel one used when no channel specified"""
         if channel == None:
             channel = CH1
         volt = 0.0
@@ -292,6 +300,7 @@ class RigolDG:
         return volt
 
     def readFreq(self, channel=None):
+        """Read the current value, Channel one used when no channel specified"""
         if channel == None:
             channel = CH1
         freq = 0.0;
@@ -306,6 +315,7 @@ class RigolDG:
         return freq
 
     def readFunc(self,channel=None):
+        """Read the current value, Channel one used when no channel specified"""
         if channel == None:
             channel = CH1
         func =""
@@ -325,6 +335,7 @@ class RigolDG:
         return retValue
 
     def syncVoltages(self, sync=True, ratio_CH1 = 1.0, ratio_CH2=1.0):
+        """ Handle the sincronisation of the channels here"""
         if sync:
             self.syncVoltage = True
             self.syncVoltageRatio1_2 = ratio_CH2 / ratio_CH1
@@ -332,6 +343,7 @@ class RigolDG:
             self.syncVoltage = False
 
     def syncFrequency(self,sync=True, ratio_CH1 = 1.0, ratio_CH2 = 1.0):
+        """ Handle the sincronisation of the channels here"""
         if sync:
             self.syncFreq=True
             self.syncFreqRatio1_2 = ratio_CH2 / ratio_CH1
@@ -340,10 +352,10 @@ class RigolDG:
 
 
 def GetDG1022Device():
+    """ Call this function to get cross platform access for the function generator"""
     if platform.system() == 'Linux':
         return RigolDG('/dev/usbtmc0')
     elif platfrom.system() =='Windows':
         return RigolDG('TBA')
 
-#r = RigolDG(DEVICE)
 
