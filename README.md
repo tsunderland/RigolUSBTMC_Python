@@ -34,6 +34,7 @@ The gui can be called using the command
 
 for a basic command line version of the USBTMC based interface, start python and within python 
 > from DG1022 import *
+
 > dg1022 = GetDG1022Device()
 
 ###Version History###
