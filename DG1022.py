@@ -30,6 +30,10 @@ import Queue
 import platform
 from PyQt4.QtGui import *
 
+if platfrom.system() =='Windows':
+    import visa
+
+
 debug_mode = True
 
 def debugPrint(message):
@@ -65,7 +69,7 @@ class usbtmc:
 
     def getName(self):
         """ Return the unique identifier based on the *IDN? query"""
-        self.write("*IDN?")
+        seljf.write("*IDN?")
         sleep(0.10)
         return self.read(300)
 
@@ -84,7 +88,12 @@ VPP,VRMS,DBM = range(8,11)
 class RigolDG:
     """ Class to control the Rigol DS1000 series oscilloscope"""
     def __init__(self,device):
-        self.meas = usbtmc(device)
+        self.meas = None
+        if platfrom.system() =='Windows':
+            rm = visa.ResourceManager()
+            self.meas = rm.open_resource(device)
+        else:
+            self.meas = usbtmc(device)
         self.syncVoltage=False
         self.syncFreq=False
         self.syncFreqRatio1_2=1.0
@@ -93,13 +102,13 @@ class RigolDG:
 
 
     def getName(self):
-        self.meas.write("*IDN?")
+        self.write("*IDN?")
         sleep(0.01)
-        return self.meas.read()
+        return self.read()
 
     def reset(self):
         """ Reset the instrument"""
-        self.meas.sendReset()
+        self.write("*RST")
 
 
     def setFunc(self, function = None, channel = None):
@@ -120,7 +129,7 @@ class RigolDG:
                 msg += "NOIS"
 
             if len(msg) > 6:
-                self.meas.write(msg)
+                self.write(msg)
 
         elif channel == CH2:
             if function == None:
@@ -136,7 +145,7 @@ class RigolDG:
                 msg += "NOIS"
 
             if len(msg) > 9:
-                self.meas.write(msg)
+                self.write(msg)
 
 
     def enableChan1(self, en = True):
@@ -146,18 +155,18 @@ class RigolDG:
             msg += "ON"
         else:
             msg += "OFF"
-        self.meas.write(msg)
+        self.write(msg)
         attempts = 1
         if en:
             while (self.ask("OUTP?") == "OFF\n\r") and en:
-                self.meas.write(msg)
+                self.write(msg)
                 attempts += 1
                 if attempts >= 5:
                     raise ValueException("Unable to Enable Channel 1!")
 
         else:
             while (self.ask("OUTP?") == "ON\n\r") and not en:
-                self.meas.write(msg)
+                self.write(msg)
                 attempts +=1
                 if attempts >= 5:
                     raise ValueException("Unable to Disable Channel 1!")
@@ -170,19 +179,19 @@ class RigolDG:
             msg += "ON"
         else:
             msg += "OFF"
-        self.meas.write(msg)
+        self.write(msg)
         self.Chan2_ON = en
         attempts = 1
         if en:
             while (self.ask("OUTP:CH2?") == "OFF\n\r") and en:
-                self.meas.write(msg)
+                self.write(msg)
                 attempts += 1
                 if attempts >= 5:
                     raise ValueException("Unable to Enable Channel 2!")
 
         else:
             while (self.ask("OUTP:CH2?") == "ON\n\r") and not en:
-                self.meas.write(msg)
+                self.write(msg)
                 attempts +=1
                 if attempts >= 5:
                     raise ValueException("Unable to Disable Channel 2!")
@@ -209,19 +218,19 @@ class RigolDG:
         if(channel == None):
             if self.syncFreq:
                 msg="FREQ "+str(value)
-                self.meas.write(msg)
+                self.write(msg)
                 msg="FREQ:CH2 "+str(value * self.syncFreqRatio1_2)
-                self.meas.write(msg)
+                self.write(msg)
                 return
             else:
                 channel = CH1
         if channel == CH1:
             msg = "FREQ "+str(value)
 
-            self.meas.write(msg)
+            self.write(msg)
         elif channel == CH2:
             msg = "FREQ:CH2 " + str(value)
-            self.meas.write(msg)
+            self.write(msg)
         else:
             print("Unsupported channel selection")
 
@@ -235,16 +244,18 @@ class RigolDG:
 
     def ask(self, message=""):
         """ request a response using the low level control"""
-        return self.meas.ask(message)
+        self.write(message)
+        sleep(0.1)
+        return self.read()
 
     def setVoltageUnits(self,unit="VPP",channel = None):
         """ Provide string representation of voltage units"""
         if channel == None:
             if self.syncVoltage:
                 msg="VOLT:UNIT "+unit
-                self.meas.write(msg)
+                self.write(msg)
                 msg="VOLT:UNIT:CH2 " + unit
-                self.meas.write(msg)
+                self.write(msg)
                 return
 
             else:
@@ -252,14 +263,14 @@ class RigolDG:
 
         if channel == CH1:
             msg = "VOLT:UNIT " + unit
-            self.meas.write(msg)
+            self.write(msg)
             msg = "VOLT "+ str(value)
-            self.meas.write(msg)
+            self.write(msg)
         elif channel == CH2:
             msg = "VOLT:UNIT:CH2 " + unit
-            self.meas.write(msg)
+            self.write(msg)
             msg = "VOLT:CH2 "+ str(value)
-            self.meas.write(msg)
+            self.write(msg)
 
         else:
             print("Unsupported channel selection")
@@ -270,17 +281,17 @@ class RigolDG:
         if channel == None:
             if self.syncVoltage:
                 msg="VOLT " + str(value)
-                self.meas.write(msg)
+                self.write(msg)
 
                 msg="VOLT:CH2 "+str((float(value * self.syncVoltageRatio1_2)))
                 sleep(0.1)
-                self.meas.write(msg)
+                self.write(msg)
                 if offset is not None:
                     msg = "VOLT:OFFS " + offset
-                    self.meas.write(msg)
+                    self.write(msg)
                 if offset is not None:
                     msg = "VOLT:OFFS:CH2 " + str(offset)
-                    self.meas.write(msg)
+                    self.write(msg)
                 return
 
             else:
@@ -288,17 +299,17 @@ class RigolDG:
 
         if channel == CH1:
             msg = "VOLT "+ str(value)
-            self.meas.write(msg)
+            self.write(msg)
             if offset is not None:
                 msg = "VOLT:OFFS " + offset
-                self.meas.write(msg)
+                self.write(msg)
 
         elif channel == CH2:
             msg = "VOLT:CH2 "+ str(value)
-            self.meas.write(msg)
+            self.write(msg)
             if offset is not None:
                 msg = "VOLT:OFFS:CH2 " + str(offset)
-                self.meas.write(msg)
+                self.write(msg)
         else:
             print("Unsupported channel selection")
 
