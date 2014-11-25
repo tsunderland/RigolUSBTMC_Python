@@ -30,7 +30,7 @@ import Queue
 import platform
 from PyQt4.QtGui import *
 
-if platfrom.system() =='Windows':
+if platform.system() =='Windows':
     import visa
 
 
@@ -89,7 +89,7 @@ class RigolDG:
     """ Class to control the Rigol DS1000 series oscilloscope"""
     def __init__(self,device):
         self.meas = None
-        if platfrom.system() =='Windows':
+        if platform.system() =='Windows':
             rm = visa.ResourceManager()
             self.meas = rm.open_resource(device)
         else:
@@ -389,7 +389,12 @@ def GetDG1022Device():
     """ Call this function to get cross platform access for the function generator"""
     if platform.system() == 'Linux':
         return RigolDG('/dev/usbtmc0')
-    elif platfrom.system() =='Windows':
-        return RigolDG('TBA')
+    elif platform.system() =='Windows':
+        rm = visa.ResourceManager()
+        usb = filter(lambda x: 'USB' in x, rm.list_resources())
+        if len(usb) != 1:
+            print 'Unable to specify instruments. Please check connection and try again.'
+            sys.exit(-1)
+        return RigolDG(usb[0])
 
 

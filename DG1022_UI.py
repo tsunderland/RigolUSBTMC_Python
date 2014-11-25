@@ -24,6 +24,7 @@
 #import sys
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+import sys
 from DG1022 import *
 
 
