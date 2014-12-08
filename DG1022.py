@@ -61,7 +61,7 @@ class usbtmc:
     def write(self,command):
         """Send an arbitrary command directly to the device"""
         os.write(self.FILE,command)
-        sleep(0.1)
+        sleep(0.2)
 
     def read(self, length = 4000):
         """ Read an arbitary amount of data directly from the device"""
